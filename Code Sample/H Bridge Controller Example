@@ -1,0 +1,37 @@
+    #include "mbed.h" //name of parameter import
+ 
+    class Motor  //declare new class
+    {
+        public:
+            Motor(PinName forwardPinInput, PinName backwardPinInput) : forwardPin(forwardPinInput), backwardPin(backwardPinInput){}
+            PwmOut forwardPin;
+            PwmOut backwardPin;
+                
+            void Forward(float forwardInput)
+            {
+                    forwardPin = forwardInput;
+                    backwardPin = 0;
+            };  
+            
+            void Backward(float backwardInput)
+            {
+                    forwardPin = 0;
+                    backwardPin = backwardInput;
+            };  
+    };
+    
+    Motor motorLeft(P0_9, P0_8);
+    
+    int main()
+    {    
+        while(1)
+        {           
+                //Set left motor to move forward at a speed
+                motorLeft.Forward(1.0);
+                wait(0.5);
+                
+                //Set left motor to move backward at a speed
+                motorLeft.Backward(0.5);
+                wait(0.5);
+        }
+    }
