@@ -1,0 +1,38 @@
+Sensors (2017 REF)
+Sensors plays an important part in navigating the robot. By reading and interpreting data, the information provided is translated to movement of the robot.
+For this project we will be using the SRF05 Ultrasonic sensor and the Sharp GP2YOA41SKOF infrared sensor.
+The infrared sensor will be mounted in the front of the car to detect the distance.
+Two ultrasound sensors will be mounted on the sides to provide information when the vehicle is too close to the side of the wall. 
+
+SRF05 Ultrasonic sensor
+The ultrasonic sensor transmits a sonic burst off the walls of the maze, and measures the time taken to receive the echo pulse.
+The time taken is used to calculate the distance of the wall. This sensor has a range of 1 to 400cm.
+The sensor consist of 2 modes, mode 1 and mode 2. Mode 1 requires 4 pins to function. Mode 2 combines the echo and trigger pin.
+This saves 1 pin. In this project we will be using mode 1 as we do not need to save pins.
+The MCU possesses more than enough spare pins for the required configuration. 
+Figure 4: SRF05 Ultrasonic sensor [Link]
+ 
+Sharp GP2YOA41SKOF
+The infrared sensor produce an output voltage with respect to distance to the wall.  The distance and voltage are govern by equation 1:
+Distance=11.89V/(3.02*Reading+0.0445V)-0.42     [Equation 1]
+To derive this formula we look at the linearized graph provided from the data sheet in appendix [A-1].
+Plotting a best fit line of the linearized graph will give a more accurate derivation of formula.
+From the best fit line, we are able to get values of 2 points as shown in figure 2B. 
+ 
+Figure 5: Graph of voltage vs inverse number of distance. [Link]
+
+From the linearized line, we are able to derive the equation of the line using y= mx+c
+Gradient = m = Δy/Δx=(3-0.55)/(0.256-0.05)=11.89
+y= 11.89x+c
+Sub points x = 0.05, y = 0.55
+0.55=12(0.05)+c
+c=-0.0445
+y= 11.89x-0.0445
+Voltage=11.89(1/(Length+0.42))-0.0445
+Length=11.89/(Voltage+0.0445)-0.42
+The reading from the sensor is within range of 0 to 1. Therefore we have to multiply the reading by a constant in order to get the voltage. The constant is the maximum voltage reading from the distance vs voltage graph, which is 3.02.
+Voltage=constant*Reading 
+Voltage=3.02*Reading 
+
+Hence, deriving equation [1]:
+Distance=11.89V/(3.02*Reading+0.0445V)-0.42  
