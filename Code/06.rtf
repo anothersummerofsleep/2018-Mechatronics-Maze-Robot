@@ -1,0 +1,318 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf200
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww25400\viewh15520\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 #include "mbed.h"\
+#include "SRF05.h"\
+#include "stdio.h"\
+#include "stdlib.h"\
+#include "time.h"\
+#include "Motor.h"\
+#include "motordriver.h"\
+\
+SRF05 srf1Right(p11, p12); // Trigger Echo   Main code reference from https://os.mbed.com/users/dan_cuspi/code/SensoresUltrasonicosSRF05/file/92ceb941f65e/main.cpp/\
+SRF05 srf2Left(p13, p14); // Trigger Echo\
+SRF05 srf3Front(p15, p16); // Trigger Echo\
+\
+AnalogIn aIn(p20); // Analog Input \
+\
+DigitalOut led1(LED1);  // Left Motor\
+DigitalOut led2(LED2);  // Left Motor\
+DigitalOut led3(LED3);  // Right Motor\
+DigitalOut led4(LED4);  // Right Motor\
+\
+//Motor A(p26, p28, p27, 1); // pwm, fwd, rev, can brake \
+//Motor B(p25, p24, p23, 1); // pwm, fwd, rev, can brake\
+\
+void ReadDistance(void) \{\
+        printf("\\nDistances to obstacles.. \\nRight Sensor = %.1f cm  Left Sensor: %.1f cm Front Sensor: %.1f cm \\n\\r", srf1Right.read(),srf2Left.read(),srf3Front.read()); \
+        led1=0;\
+        led2=0;\
+        led3=0;\
+        led4=0;\
+    \}\
+\
+void LeftSensor(void)   \{\
+       if (srf2Left.read()<10) \{\
+                led1=1; \
+                led2=1;\
+                led3=1;\
+                led4=1;\
+            \}\
+            \
+            else if (srf2Left.read()<15)    \{\
+                led1=0;\
+                led2=1;\
+                led3=1;\
+                led4=1;\
+            \}\
+            \
+            else if (srf2Left.read()<20)    \{\
+                led1=0;\
+                led2=0;\
+                led3=1;\
+                led4=1;\
+            \}\
+\
+            else if (srf2Left.read()<25)    \{\
+                led1=0;\
+                led2=0;\
+                led3=0;\
+                led4=1;\
+            \}\
+            \
+            else  \{\
+            led1=0;\
+            led2=0;\
+            led3=0;\
+            led4=0;\
+            \} \
+        \}\
+       \
+void RightSensor(void)   \{\
+       if (srf1Right.read()<10) \{\
+                led1=1; \
+                led2=1;\
+                led3=1;\
+                led4=1;\
+            \}\
+            \
+            else if (srf1Right.read()<15)    \{\
+                led1=1;\
+                led2=1;\
+                led3=1;\
+                led4=0;\
+            \}\
+            \
+            else if (srf1Right.read()<20)    \{\
+                led1=1;\
+                led2=1;\
+                led3=0;\
+                led4=0;\
+            \}\
+\
+            else if (srf1Right.read()<25)    \{\
+                led1=1;\
+                led2=0;\
+                led3=0;\
+                led4=0;\
+            \}\
+            \
+            else  \{\
+            led1=0;\
+            led2=0;\
+            led3=0;\
+            led4=0;\
+            \} \
+        \} \
+        \
+unsigned int dice(void) // Generate randomly between 0 & 1. Reference from https://os.mbed.com/questions/61158/Random-number-in-C/\
+\{\
+    unsigned int iRandom = 0;\
+    unsigned int x;\
+    \
+    for (x = 0; x <= 4; x += 2)\{\
+         iRandom += ( (aIn.read_u16() % 3) );\
+        wait_ms (1);\
+    \}\
+    \
+    return iRandom%2;\
+\} \
+\
+int WallCount(void) // To increase upon detecting a wall. To know which situation the robot is in\
+\{\
+    int WallCounter = 0;\
+    int c;\
+    \
+    for (c = 0; c<2; c++)\{\
+        WallCounter = c;\
+        wait_ms (1);\
+    \}\
+    \
+    return WallCounter;\
+\} \
+\
+int LogicLeftorRight(int iRandom) // Logic 0 to turn left , Logic 1 to turn right\
+\{\
+    int i=0;\
+    if(iRandom == 0)   \{\
+        \
+        led4 = 1; // Turn Left\
+        i= 0;\
+        \}\
+        \
+    if (iRandom == 1)    \{\
+        led1=1;// Turn Right\
+        i=1;\
+        \}\
+    \
+    return i;\
+\}   \
+/*\
+Motor::Motor(PinName pwm, PinName fwd, PinName rev, int brakeable):        // reference from https://os.mbed.com/cookbook/Motor#library\
+        _pwm(pwm), _fwd(fwd), _rev(rev) \{\
+\
+    // Set initial condition of PWM\
+    _pwm.period(0.001);\
+    _pwm = 0;\
+\
+    // Initial condition of output enables\
+    _fwd = 0;\
+    _rev = 0;\
+\
+    //set if the motor dirver is capable of braking. (addition)\
+    Brakeable= brakeable;\
+    sign = 0;//i.e nothing.\
+\}\
+\
+float Motor::speed(float speed) \{\
+    float temp = 0;\
+    if (sign == 0) \{\
+        _fwd = (speed > 0.0);\
+        _rev = (speed < 0.0);\
+        temp = abs(speed);\
+        _pwm = temp;\
+    \} else if (sign == 1) \{\
+        if (speed < 0) \{\
+            _fwd = (speed > 0.0);\
+            _rev = (speed < 0.0);\
+            _pwm = 0;\
+            temp = 0;\
+       \} else \{\
+            _fwd = (speed > 0.0);\
+            _rev = (speed < 0.0);\
+            temp = abs(speed);\
+            _pwm = temp;\
+        \}\
+    \} else if (sign == -1) \{\
+        if (speed > 0) \{\
+            _fwd = (speed > 0.0);\
+            _rev = (speed < 0.0);\
+            _pwm = 0;\
+            temp = 0;\
+        \} else \{\
+            _fwd = (speed > 0.0);\
+            _rev = (speed < 0.0);\
+            temp = abs(speed);\
+            _pwm = temp;\
+        \}\
+    \}\
+    if (speed > 0)\
+        sign = 1;\
+    else if (speed < 0) \{\
+        sign = -1;\
+    \} else if (speed == 0) \{\
+        sign = 0;\
+    \}\
+    return temp;\
+\}\
+//  (additions)\
+void Motor::coast(void) \{\
+    _fwd = 0;\
+    _rev = 0;\
+    _pwm = 0;\
+    sign = 0;\
+\}\
+\
+void Motor::Forward(void)   \{\
+    _fwd = 1;\
+    _rev = 0;\
+    _pwm = 0;\
+    sign = 0;\
+    \
+\
+float Motor::stop(float duty) \{\
+    if (Brakeable == 1) \{\
+        _fwd = 1;\
+        _rev = 1;\
+        _pwm = duty;\
+        sign = 0;\
+        return duty;\
+    \} else\
+        Motor::coast();\
+        return -1;\
+\}\
+\
+float Motor::state(void) \{\
+    if ((_fwd == _rev) && (_pwm > 0)) \{\
+        return -2;//braking\
+    \} else if (_pwm == 0) \{\
+        return 2;//coasting\
+    \} else if ((_fwd == 0) && (_rev == 1)) \{\
+        return -(_pwm);//reversing\
+    \}  else if ((_fwd == 1) && (_rev == 0)) \{\
+        return _pwm;//fowards\
+    \} else\
+        return -3;//error\
+\}\
+\
+*/\
+\
+int main() \{\
+    \
+    int iRandom;\
+    int i=0;\
+    int WallCounter; \
+\
+     while(1) \{ \
+       \
+        ReadDistance(); // call ReadDistance() to print distances read by 3 sensors\
+        \
+while (srf3Front.read()<22==1) // obstacle right ahead. stop vehicle. \
+         \{\
+             //// Motor::Forward()\
+             //Left motor\
+             led1=1;   //input 1\
+             led2=1;   //intput2\
+             //Right motor\
+             led3=1;  //input3\
+             led4=1;  //input 4                   \
+             \
+             WallCounter = WallCount();\
+             printf("\\nWall Count Number: %d", WallCounter);\
+             \
+             iRandom = dice();\
+ \
+             break;\
+        \}\
+             printf("\\nRandom Number: %d", iRandom);\
+             \
+             i= LogicLeftorRight(iRandom);\
+             \
+             printf("\\nLeft or right turn is %d", i);\
+        \
+        if (srf3Front.read()<70) // obstacle detected ahead. slow down speed \
+            \{                \
+                // Motor::Forward()\
+                led1=0; \
+                led2=1;\
+                led3=1;\
+                led4=0;\
+            \}\
+            \
+            else if (srf3Front.read()>70) // no obstacle so move at normal speed\
+            \{\
+               // Motor::Forward()\
+                led1=1;\
+                led2=0;\
+                led3=0;\
+                led4=1;\
+            \}\
+          \
+          else  \{\
+            led1=0;\
+            led2=0;\
+            led3=0;\
+            led4=0;\
+            \} \
+        \
+        LeftSensor();\
+        RightSensor();\
+\
+          \}\
+          \
+        // wait(0.2); \
+\} }
