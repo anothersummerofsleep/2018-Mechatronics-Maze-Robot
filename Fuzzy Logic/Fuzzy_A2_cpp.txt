@@ -1,0 +1,189 @@
+/*
+University of Glasgow
+OIP MECHATRONIC TEAM PROJECT 3G 2018
+MAZE NAVIGATION ALGORITHM
+Version : Alpha 2.0
+Last Edit: 100718 -Ken 
+Changelog:
+-Initial Successful compile of code.
+-Test variables updated and tuned
+-Standard S maze cleared.
+*/
+
+#include "mbed.h"
+#include "motordriver.h"
+#include "SRF05.h"
+
+
+SRF05 rightsensor(p11,p12);         //Trigger p11, Echo p12 RS pin
+SRF05 leftsensor(p13,p14);          //Trigger p13, Echo p14 LS pin
+SRF05 frontsensor(p15,p16);         //Trigger p15, Echo p16 FS pin
+Motor ALeftM(p26, p30, p29, 1);     // pwm, fwd, rev, can break Left
+Motor BRightM(p25, p23, p24, 1);    // pwm, fwd, rev, can break Right
+
+//Ultrasound
+float FS1 = 0.0;                    //store 1st front ultrasound value
+float LS1 = 0.0;                    //store 1st left ultrasound value
+float RS1 = 0.0;                    //store 1st right ultrasound value
+float FS2 = 0.0;                    //store 2nd front ultrasound value
+float LS2 = 0.0;                    //store 2nd left ultrasound value
+float RS2 = 0.0;                    //store 2nd right ultrasound value
+float UFBound = 62;                 // Ultrasound Front Detection para
+float USBound = 26;                // Ultrasound Side Detection para
+
+//Movement
+void forward();                     // Move Forward
+void stop();                        // Stop
+void back();                        // Reverse
+void adjR();                        // Adjust Right
+void adjL();                        // Adjust Left
+void PRNinety();                    // Pivot Right delay 
+void PLNinety();                    // Pivot Left delay
+void POEighty();                    // Pivot 180 Special
+
+//Local Conditions
+
+void forward()
+    {
+        ALeftM.speed(0.4);
+        BRightM.speed(0.4);
+    }
+    
+
+void stop()
+    {
+        ALeftM.stop(-0.5);
+        BRightM.stop(-0.5);
+        wait(0.5);
+    }
+
+void back()
+    {
+        ALeftM.speed(-0.5);
+        BRightM.speed(-0.5);
+        //wait(0.8);
+    }
+
+void adjR()
+    {
+        ALeftM.speed(0.6);
+        BRightM.speed(0.4);
+    }
+
+void adjL()
+    {
+        ALeftM.speed(0.4);
+        BRightM.speed(0.6);
+    }
+
+void PRNinety()
+    {
+        ALeftM.speed(0.75);
+        BRightM.speed(-0.75);
+        wait(0.4);
+    }
+
+void PLNinety()
+    {
+        ALeftM.speed(-0.75);
+        BRightM.speed(0.75);
+        wait(0.4);
+    }
+
+void POEighty()
+    {
+        PRNinety();
+        PRNinety();
+        wait(0.5);
+    }
+
+void Fuzzy1(float front,float left, float right)    // Nav
+    {
+        if (front < UFBound)                        //Front wall Detect
+            {
+                if (left < right)                   // Check LS and RS
+                {
+                PRNinety();
+                }
+                    else
+                    {
+                        PLNinety();
+                    }
+            }
+            else if (front > UFBound)
+                {
+                    if (left < USBound)
+                        {
+                            back();
+                            wait(0.25);
+                            adjR();
+                            wait(0.2);
+                            forward();
+                            wait(0.5);
+                            adjR();
+                            wait(0.1);
+                            forward();
+                        }
+                        if (right < USBound)
+                            {
+                            back();
+                            wait(0.25);
+                            adjL();
+                            wait(0.2);
+                            forward();
+                            wait(0.5);
+                            adjL();
+                            wait(0.1);
+                            forward(); 
+                            }
+                }
+                else
+                    {
+                        forward();
+                        wait(0.8);
+                        stop();
+                    }
+                
+    }
+
+
+void Fuzzy2 (float front,float left, float right, float front2, float left2, float right2)       //Dead End
+    {
+        if ( front < UFBound)
+            {
+                if ((left == left2 )&&(right == right2 ))
+                    {
+                        POEighty();
+                        wait(0.25);
+                        back();
+                        wait(0.2);
+                        adjR();
+                        wait(0.1);
+                    }
+            }
+    }
+
+
+
+
+// Program
+
+int main()
+    {
+        while(1)
+        {
+            FS1= frontsensor.read();        //poll value front sense1
+            LS1= leftsensor.read();         //poll value left sense1
+            RS1= rightsensor.read();        //poll value right sense1
+
+            Fuzzy1(FS1,LS1,RS1);            //Fuzzy logic1
+
+            FS2= frontsensor.read();        //poll value front sense2
+            LS2= leftsensor.read();         //poll value left sense2
+            RS2= rightsensor.read();        //poll value right sense2
+  
+            Fuzzy2(FS1,LS1,RS1,FS2,LS2,RS2);//Fuzzy logic2
+
+        }
+    }         
+            
